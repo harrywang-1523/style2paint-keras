@@ -4,7 +4,6 @@ from keras.models import *
 from keras.layers import *
 from keras.optimizers import *
 from keras import losses
-from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras import backend
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 from keras.layers.merge import add
@@ -18,41 +17,19 @@ def train():
 
     conv1 = Conv2D(filters=16, kernel_size=2, strides=2, padding='SAME', activation='relu')(sketch)
     print("conv1 shape:", conv1.shape)
-    # pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
-    # print("pool1 shape:", pool1.shape)
 
     conv2 = Conv2D(filters=32, kernel_size=2, strides=2, padding='SAME', activation='relu')(conv1)
     print("conv2 shape:", conv2.shape)
-    # pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
-    # print("pool2 shape:", pool2.shape)
 
     conv3 = Conv2D(filters=64, kernel_size=2, strides=2, padding="SAME", activation='relu')(conv2)
     print("conv3 shape:", conv3.shape)
-    # pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
-    # print("pool3 shape", pool3.shape)
 
     conv4 = Conv2D(filters=128, kernel_size=2, strides=2, padding="SAME", activation='relu')(conv3)
     print("conv4 shape:", conv4.shape)
-    # pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
-    # print("pool4 shape", pool4.shape)
+
 
     conv5 = Conv2D(filters=256, kernel_size=2, strides=2, padding="SAME", activation='relu')(conv4)
     print("conv5 shape:", conv5.shape)
-    # pool5 = MaxPooling2D(pool_size=(2, 2))(conv5)
-    # print("pool5 shape", pool5.shape)
-
-    # guide1 = Conv2DTranspose(filters=512, kernel_size=2, strides=2, padding="SAME", activation='relu')(conv5)
-    # print("guide1 shape:",guide1.shape)
-    # guide2 = Conv2DTranspose(filters=256, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide1)
-    # print("guide2 shape:",guide2.shape)
-    # guide3 = Conv2DTranspose(filters=128, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide2)
-    # print("guide3 shape:",guide3.shape)
-    # guide4 = Conv2DTranspose(filters=64, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide3)
-    # print("guide4 shape:", guide4.shape)
-    # guide5 = Conv2DTranspose(filters=32, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide4)
-    # print("guide5 shape:", guide5.shape)
-    # front_decoder = Dense(1)(guide5)
-    # print('front decoder shape:', front_decoder)
 
     front_output = front_decoder().fit((conv5, style_grey_img), batch_size=1)
     front_loss = abs(front_output-style_grey)
@@ -64,33 +41,16 @@ def train():
     print('Vgg layer shape:', vgg_layer.shape)
 
     deconv7 = add([vgg_layer,conv6])
-    # deconv7 = Reshape([16,16,512])(deconv7)
     deconv7 = Conv2DTranspose(filters=512, kernel_size=2, strides=2, padding='SAME', activation='relu')(deconv7)
     print('deconv7(before) shape:', deconv7.shape)
     end_output = end_decoder().fit((deconv7, style512), batch_size=1)
     end_loss = abs(end_output-style512)
 
-    # guide6 = Conv2DTranspose(filters=512, kernel_size=2, strides=2, padding="SAME", activation="relu")(deconv7)
-    # print("guide6 shape:", guide6.shape)
-    # guide7 = Conv2DTranspose(filters=256, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide6)
-    # print("guide7 shape:", guide7.shape)
-    # guide8 = Conv2DTranspose(filters=128, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide7)
-    # print("guide8 shape:", guide8.shape)
-    # guide9 = Conv2DTranspose(filters=64, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide8)
-    # print("guide9 shape:", guide9.shape)
-    # guide10 = Conv2DTranspose(filters=32, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide9)
-    # print("guide10 shape:", guide10.shape)
-    # end_decoder = Dense(3)(guide10)
-    # print('end decoder shape:', end_decoder)
-
     deconv7 = concatenate([deconv7, conv5], axis=3)
     print("deconv7 shape:", deconv7.shape)
 
     deconv8 = Conv2DTranspose(filters=256, kernel_size=2, strides=2, padding='SAME', activation='relu')(deconv7)
-    # crop3 = Cropping2D(cropping=((16,16),(16,16)))(conv3)
     deconv8 = concatenate([deconv8, conv4], axis=3)
-    # crop3 = Cropping2D(cropping=((16,16),(16,16)))(conv3)
-    # deconv8 = merge([deconv8, crop3], mode='concat', concat_axis=3)
     print('deconv8 shpae:', deconv8.shape)
 
     deconv9 = Conv2DTranspose(filters=128, kernel_size=2, strides=2, padding='SAME', activation='relu')(deconv8)
@@ -99,9 +59,7 @@ def train():
     print('deconv9 shpae:', deconv9.shape)
 
     deconv10 = Conv2DTranspose(filters=64, kernel_size=2, strides=2, padding='SAME', activation='relu')(deconv9)
-    # crop1 = Cropping2D(cropping=((64,64),(64,64)))(conv1)
     deconv10 = concatenate([deconv10, conv2], axis=3)
-    # crop1 = Cropping2D(cropping=((64,64),(64,64)))(conv1)
     print('deconv10 shape:', deconv10.shape)
 
     deconv11 = Conv2DTranspose(filters=32, kernel_size=2, strides=2, padding='SAME', activation='relu')(deconv10)
@@ -136,7 +94,7 @@ def front_decoder():
     output_layer = Dense(1)(guide5)
     print('front decoder shape:', output_layer.shape)
     front_decode_model = Model(inputs=[input, style_grey], output=output_layer)
-    front_decode_model.compile(loss=losses.mean_absolute_error(style_grey, output_layer), optimizer='sgd'
+    front_decode_model.compile(loss=losses.mean_absolute_error(y_true=style_grey, y_pred=output_layer), optimizer='sgd'
                                , metrics=['accuracy'])
 
 
