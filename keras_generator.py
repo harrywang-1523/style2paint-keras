@@ -8,6 +8,7 @@ from keras.backend import tf as ktf
 from keras import backend as K
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 from keras.layers.merge import add
+import matplotlib.pyplot as plt
 
 def main_model():
     sketch = Input((512, 512, 1))
@@ -24,7 +25,7 @@ def main_model():
     vgg_style = Lambda(lambda image: ktf.image.resize_images(image, (224, 224)))(style)
     vgg_layer = VGG19(input_tensor=vgg_style, input_shape=(224, 224, 3)).output
 
-    deconv7 = add([vgg_layer,conv6])
+    deconv7 = add([vgg_layer, conv6])
     deconv7 = Conv2DTranspose(filters=512, kernel_size=2, strides=2, padding='SAME', activation='relu')(deconv7)
     deconv7 = concatenate([deconv7, conv5], axis=3)
     deconv8 = Conv2DTranspose(filters=256, kernel_size=2, strides=2, padding='SAME', activation='relu')(deconv7)
@@ -37,10 +38,17 @@ def main_model():
     deconv11 = concatenate([deconv11, conv1], axis=3)
 
     output_layer = Dense(units=3)(deconv11)
-
+    #
     # style_256 = Lambda(lambda image: ktf.image.resize_images(image, (256, 256)))(style)
+    # (style_256, output_layer)
     model = Model(inputs=[sketch, style], outputs=output_layer)
-    # model.compile(optimizer='SGD', loss=losses.mean_absolute_error, metrics=['accuracy'])
+    model.compile(optimizer='sgd', loss=losses.mean_absolute_error, metrics=['accuracy'])
+
+    # front_deco_model = front_decoder()
+    # gray_style = ktf.image.rgb_to_grayscale(style)
+    # front_deco_model.compile(optimizer=sgd, loss=losses.mean_absolute_error(gray_style, ), metrics=['accuracy'])
+    # end_deco_model = end_decoder()
+    # end_deco_model.compile(optimizer=sgd, loss=losses.mean_absolute_error(), metrics=['accuracy'])
     return model
 
 def end_decoder():
@@ -63,7 +71,7 @@ def end_decoder():
     output_layer = Dense(3)(guide10)
 
     model = Model(inputs=[sketch, style], output=output_layer)
-    model.compile(loss=losses.mean_absolute_error, optimizer='sgd', metrics=['accuracy'])
+    model.compile(loss=losses.mean_absolute_error(output_layer, style), optimizer='sgd', metrics=['accuracy'])
     return model
 
 def front_decoder():
@@ -83,26 +91,26 @@ def front_decoder():
 
     gray_style = ktf.image.rgb_to_grayscale(style)
     model = Model(inputs=[sketch, style], output=output_layer)
-    model.compile(loss=losses.mean_absolute_error, optimizer='sgd', metrics=['accuracy'])
+    model.compile(loss=losses.mean_absolute_error(gray_style, output_layer), optimizer='sgd', metrics=['accuracy'])
     return model
 
-def train():
+def generator():
     sketch = Input((512, 512, 1))
     style = Input((512, 512, 3))
 
-    style_256 = Lambda(lambda image: ktf.image.resize_images(image, (256, 256)))(style)
     network_model = main_model()
-    network_model.fit((sketch, style), batch_size=1)
-    network_loss = main_model().loss
+    network_loss = network_model.fit((sketch, style), batch_size=1).history.get('loss')
 
-    front_output = front_decoder().fit((sketch, style), batch_size=1)
-    front_loss = front_decoder().loss
-    end_output = end_decoder().fit((sketch, style), batch_size=1)
-    end_loss = end_decoder().loss
+    front_deco_model = front_decoder()
+    front_deco_loss = front_deco_model.fit((sketch, style), batch_size=1).history.get('loss')
 
-    end_decoder_model = Model(inputs=[sketch, style], output=None)
-    end_decoder_model.compile(loss=front_loss + end_loss + network_loss, optimizer='sgd', metrics=['accuracy'])
+    end_deco_model = end_decoder()
+    end_deco_loss = end_deco_model.fit((sketch, style), batch_size=1).history.get('loss')
+
+    # model = Model(inputs=[sketch, style], output=fake_img)
+    # return model
 
 sketch_image = load_img('./Sketch.jpg')
 style_image= load_img('./Style.jpg')
-print(train().fit((sketch_image, style_image), batch_size=1))
+# print(generator().fit((sketch_image, style_image), batch_size=1))
+print(main_model().evaluate(sketch_image, style_image, batch_size=1))
