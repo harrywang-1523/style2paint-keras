@@ -10,10 +10,10 @@ from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_a
 from keras.layers.merge import add
 import matplotlib.pyplot as plt
 
+
 def main_model():
     sketch = Input((512, 512, 1))
     style = Input((512, 512, 3))
-
     # The convolutional layers in the front
     conv1 = Conv2D(filters=16, kernel_size=2, strides=2, padding='SAME', activation='relu')(sketch)
     conv2 = Conv2D(filters=32, kernel_size=2, strides=2, padding='SAME', activation='relu')(conv1)
@@ -38,7 +38,6 @@ def main_model():
     deconv11 = concatenate([deconv11, conv1], axis=3)
 
     output_layer = Dense(units=3)(deconv11)
-    #
     # style_256 = Lambda(lambda image: ktf.image.resize_images(image, (256, 256)))(style)
     # (style_256, output_layer)
     model = Model(inputs=[sketch, style], outputs=output_layer)
@@ -51,10 +50,12 @@ def main_model():
     # end_deco_model.compile(optimizer=sgd, loss=losses.mean_absolute_error(), metrics=['accuracy'])
     return model
 
+
 def end_decoder():
     sketch = Input((512, 512, 1))
     style = Input((512, 512, 3))
     conv1 = Conv2D(filters=16, kernel_size=2, strides=2, padding='SAME', activation='relu')(sketch)
+    print(conv1.shape)
     conv2 = Conv2D(filters=32, kernel_size=2, strides=2, padding='SAME', activation='relu')(conv1)
     conv3 = Conv2D(filters=64, kernel_size=2, strides=2, padding="SAME", activation='relu')(conv2)
     conv4 = Conv2D(filters=128, kernel_size=2, strides=2, padding="SAME", activation='relu')(conv3)
@@ -73,6 +74,7 @@ def end_decoder():
     model = Model(inputs=[sketch, style], output=output_layer)
     model.compile(loss=losses.mean_absolute_error(output_layer, style), optimizer='sgd', metrics=['accuracy'])
     return model
+
 
 def front_decoder():
     sketch = Input((512, 512, 1))
@@ -94,6 +96,7 @@ def front_decoder():
     model.compile(loss=losses.mean_absolute_error(gray_style, output_layer), optimizer='sgd', metrics=['accuracy'])
     return model
 
+
 def generator():
     sketch = Input((512, 512, 1))
     style = Input((512, 512, 3))
@@ -110,7 +113,13 @@ def generator():
     # model = Model(inputs=[sketch, style], output=fake_img)
     # return model
 
-sketch_image = load_img('./Sketch.jpg')
-style_image= load_img('./Style.jpg')
-# print(generator().fit((sketch_image, style_image), batch_size=1))
-print(main_model().evaluate(sketch_image, style_image, batch_size=1))
+
+if __name__ == '__main__':
+    sketch_image = img_to_array(load_img('./Sketch.jpg', grayscale=True))
+    sketch_image = K.expand_dims(sketch_image, axis=0)
+    print(sketch_image.shape)
+    style_image = img_to_array(load_img('./Style.jpg'))
+    style_image = K.expand_dims(style_image, axis=0)
+    print(style_image.shape)
+    network = main_model()
+    network.fit([sketch_image, style_image], ['sketch', 'style'], batch_size=1)
