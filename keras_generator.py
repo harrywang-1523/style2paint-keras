@@ -122,4 +122,4 @@ if __name__ == '__main__':
     style_image = K.expand_dims(style_image, axis=0)
     print(style_image.shape)
     network = main_model()
-    network.fit([sketch_image, style_image], ['sketch', 'style'], batch_size=1)
+    network.fit([sketch_image, style_image], np.random.rand(1, 256, 256, 3), batch_size=1)
