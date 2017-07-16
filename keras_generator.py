@@ -68,59 +68,7 @@ def main_model():
     # 'dense_1': losses.mean_absolute_error(gray_style, front_decoder_output),
     # 'dense_3': losses.mean_absolute_error(style, end_decoder_output),
     # 'dense_4': losses.mean_absolute_error(style_256, network_output)
-    # front_deco_model = front_decoder()
-    # gray_style = ktf.image.rgb_to_grayscale(style)
-    # front_deco_model.compile(optimizer=sgd, loss=losses.mean_absolute_error(gray_style, ), metrics=['accuracy'])
-    # end_deco_model = end_decoder()
-    # end_deco_model.compile(optimizer=sgd, loss=losses.mean_absolute_error(), metrics=['accuracy'])
     return model
-
-
-def end_decoder():
-    sketch = Input((512, 512, 1))
-    style = Input((512, 512, 3))
-    conv1 = Conv2D(filters=16, kernel_size=2, strides=2, padding='SAME', activation='relu')(sketch)
-    print(conv1.shape)
-    conv2 = Conv2D(filters=32, kernel_size=2, strides=2, padding='SAME', activation='relu')(conv1)
-    conv3 = Conv2D(filters=64, kernel_size=2, strides=2, padding="SAME", activation='relu')(conv2)
-    conv4 = Conv2D(filters=128, kernel_size=2, strides=2, padding="SAME", activation='relu')(conv3)
-    conv5 = Conv2D(filters=256, kernel_size=2, strides=2, padding="SAME", activation='relu')(conv4)
-    conv6 = Conv2D(filters=2048, kernel_size=2, strides=2, padding="SAME", activation='relu')(conv5)
-    vgg_layer = VGG19(input_tensor=style, input_shape=(224, 224, 3)).output
-    deconv7 = add([vgg_layer, conv6])
-    deconv7 = Conv2DTranspose(filters=512, kernel_size=2, strides=2, padding='SAME', activation='relu')(deconv7)
-    guide6 = Conv2DTranspose(filters=512, kernel_size=2, strides=2, padding="SAME", activation='relu')(deconv7)
-    guide7 = Conv2DTranspose(filters=256, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide6)
-    guide8 = Conv2DTranspose(filters=128, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide7)
-    guide9 = Conv2DTranspose(filters=64, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide8)
-    guide10 = Conv2DTranspose(filters=32, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide9)
-    output_layer = Dense(3)(guide10)
-
-    model = Model(inputs=[sketch, style], output=output_layer)
-    model.compile(loss=losses.mean_absolute_error(output_layer, style), optimizer='sgd', metrics=['accuracy'])
-    return model
-
-
-def front_decoder():
-    sketch = Input((512, 512, 1), name="sketch_input")
-    style = Input((512, 512, 3), name="style_input")
-    conv1 = Conv2D(filters=16, kernel_size=2, strides=2, padding='SAME', activation='relu')(sketch)
-    conv2 = Conv2D(filters=32, kernel_size=2, strides=2, padding='SAME', activation='relu')(conv1)
-    conv3 = Conv2D(filters=64, kernel_size=2, strides=2, padding="SAME", activation='relu')(conv2)
-    conv4 = Conv2D(filters=128, kernel_size=2, strides=2, padding="SAME", activation='relu')(conv3)
-    conv5 = Conv2D(filters=256, kernel_size=2, strides=2, padding="SAME", activation='relu')(conv4)
-    guide1 = Conv2DTranspose(filters=512, kernel_size=2, strides=2, padding="SAME", activation="relu")(conv5)
-    guide2 = Conv2DTranspose(filters=256, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide1)
-    guide3 = Conv2DTranspose(filters=128, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide2)
-    guide4 = Conv2DTranspose(filters=64, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide3)
-    guide5 = Conv2DTranspose(filters=32, kernel_size=2, strides=2, padding="SAME", activation="relu")(guide4)
-    output_layer = Dense(1)(guide5)
-
-    gray_style = ktf.image.rgb_to_grayscale(style)
-    model = Model(inputs=[sketch, style], output=output_layer)
-    model.compile(loss=losses.mean_absolute_error(gray_style, output_layer), optimizer='sgd', metrics=['accuracy'])
-    return model
-
 
 if __name__ == '__main__':
     sketch_image = img_to_array(load_img('./Sketch.jpg', grayscale=True))
